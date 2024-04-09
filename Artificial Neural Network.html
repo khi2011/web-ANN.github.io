@@ -1,0 +1,225 @@
+<!DOCTYPE html>
+<html>
+    <head>
+        <title>TensorFlow.js - Artificial Neural Network</title>
+        <meta charset="utf-8">
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs@1.0.0/dist/tf.min.js"></script>
+        <script src="https://cdn.jsdelivr.net/npm/@tensorflow/tfjs-vis"></script>
+        <link rel="stylesheet" href="style.css">
+        
+    </head>
+    
+    <body>
+        <h1><a href="index.html">Data Science & Engineering</a></h1>  
+        
+        <ol>
+            <li><a href="Correlation Coefficient.html">Correlation Coefficient</a></li>
+            <li><a href="Perceptron.html">Perceptron</a></li>
+            <li><a href="Artificial Neural Network.html">Artificial Neural Network</a></li>
+            <li><a href="csv to js converter.html">csv to js converter</a></li>
+        </ol>
+        
+        <div>
+            <h2>Artificial Neural Network</h2>
+        </div>
+    
+        <div>
+            <img src="ANN.jpg" alt="이미지 설명" class="custom-image">
+        </div>
+        
+        <div id="grid">
+            <p>
+                <strong>Artificial Neural Network (ANN)</strong><br>
+                인공신경망(ANN)은 여러개의 Perceptron을 연결한 구조의 알고리즘입니다.<br>
+                ANN의 구성으로는 변수를 입력하는 input layer, 결과를 출력하는 output layer, 가중치를 계산하는 hidden layer으로 구성됩니다.<br>
+                Hidden layer는 여러개의 node로 구성이 됩니다. <br><br>
+                hidden layer의 개수는 사용자가 지정해서 정할 수 있습니다. <br>
+                이론적으로 9999 거의 무한대의 hidden layer를 조직할 수 있지만 시간이 오래걸릴 뿐 아니라 결과값의 오차도 줄어든다는 보장이 없기 때문에
+                일반적으로는 1-5 개의 hidden layer로 구성되고, 오차도 1-3층으로 구성된 ANN의 오차가 작습니다.<br><br>
+                node의 경우 1-999 개로 여러개의 node로 구성이 가능하지만 hidden layer와 비슷한 이유로 일반적으로 1-30개 정도가 유리합니다. <br><br>
+
+                <strong>hyperparameters</strong><br>
+                hyperparameter는 데이터로 사용되는 입력값(변수, 인자, parameter) 외에 ANN에서 사용되는 변수 입니다. <br>
+
+
+                아래에서 머신러닝을 실행해 봅시다.
+            </p>
+            
+            <p><strong>실행방법</strong><br>
+                1. 메뉴에 4번에서 엑셀의 csv 파일을 js 파일로 변환<br>
+                단, 엑셀파일에서 1번째 행은 데이터의 이름의 행으로 지정됨<br>
+                열의 갯수에 따른 input, output 값 지정<br><br>
+                2. 변환된 js 파일 업로드<br><br>
+                3. hidden layer 개수 지정(1-10)<br><br>
+                4. node 개수 지정(1-999)<br><br>
+                5. 머신러닝 실행<br><br>
+                6. 머신러닝 종료 또는 정지 후 결과 값 다운로드<br><br>
+            </p>
+        </div>
+        
+        <div>
+        <input type="file" id="fileInput" accept=".js" style="display: block; margin: 10px auto;"><br>
+        <label for="epochsInput">Iteration:</label>
+        <input type="number" id="epochsInput" value="10000" /></br>
+        <label for="hiddenLayerInput">Number of Hidden Layers(1-99):</label>
+        <input type="number" id="hiddenLayerInput" value="2" /></br>
+        <label for="unitsInput">Units per Hidden Layer(1-99):</label>
+        <input type="number" id="unitsInput" value="20" /></br>
+        <label for="learningRateInput">Learning Rate(0.95-0.05):</label>
+        <input type="number" id="learningRateInput" value="0.45" /></br>
+        <label for="momentumInput">Momentum(0.95-0.05):</label>
+        <input type="number" id="momentumInput" value="0.45" /></br>
+        <button id="startButton">머신러닝 시작</button>
+        <button id="stopButton">정지</button></br></br>
+        <button id="downloadButton" style="display: none;">결과 파일 다운로드</button>
+        </div>
+        
+        <div id="ANN">
+            <script>
+            let isTraining = false;
+            let model;
+            let predictionData;
+            let inputMin, inputMax, outputMin, outputMax;
+            
+            // Function to save data to a text file
+            function saveDataToFile(data, filename) {
+            var blob = new Blob([data], { type: 'text/plain' });
+            var url = URL.createObjectURL(blob);
+            var a = document.createElement('a');
+            a.href = url;
+            a.download = filename;
+            document.body.appendChild(a);
+            a.click();
+            setTimeout(() => {
+                document.body.removeChild(a);
+                window.URL.revokeObjectURL(url);
+            }, 0);
+        }
+        
+        // Function to normalize data
+        function normalizeData(data) {
+            const min = tf.min(data);
+            const max = tf.max(data);
+            const normalizedData = data.sub(min).div(max.sub(min));
+            return { data: normalizedData, min: min, max: max };
+        }
+        
+        // Function to start machine learning
+        function startMachineLearning() {
+            isTraining = true;
+            
+            // Load the uploaded JavaScript file
+            const file = document.getElementById('fileInput').files[0];
+            const reader = new FileReader();
+            reader.onload = function (event) {
+                const scriptContent = event.target.result;
+                // Execute the script content
+                eval(scriptContent);
+                
+                // Assuming inputData and outputData are defined in the loaded script
+                var inputTensor = tf.tensor(inputData);
+                var outputTensor = tf.tensor(outputData);
+                
+                // Normalize input and output data
+                var normalizedInput = normalizeData(inputTensor);
+                var normalizedOutput = normalizeData(outputTensor);
+                inputMin = normalizedInput.min;
+                inputMax = normalizedInput.max;
+                outputMin = normalizedOutput.min;
+                outputMax = normalizedOutput.max;
+                var normalizedInputData = normalizedInput.data;
+                var normalizedOutputData = normalizedOutput.data;
+                
+                // Get number of hidden layers and units per hidden layer from user input
+                var numHiddenLayers = parseInt(document.getElementById('hiddenLayerInput').value);
+                var unitsPerHiddenLayer = parseInt(document.getElementById('unitsInput').value);
+                
+                // Get learning rate and momentum from user input
+                var learningRate = parseFloat(document.getElementById('learningRateInput').value);
+                var momentum = parseFloat(document.getElementById('momentumInput').value);
+                
+                // Create the model architecture based on the uploaded data and user input
+                var X = tf.input({ shape: [inputData[0].length] });
+                var hiddenLayer = X; // Initialize input layer as hiddenLayer
+                for (var i = 0; i < numHiddenLayers; i++) {
+                    hiddenLayer = tf.layers.dense({ units: unitsPerHiddenLayer, activation: 'relu' }).apply(hiddenLayer);
+                }
+                var Y = tf.layers.dense({ units: outputData[0].length }).apply(hiddenLayer);
+                model = tf.model({ inputs: X, outputs: Y });
+                
+                // Compile the model with hyperparameters
+                var compileParam = {
+                    optimizer: tf.train.momentum(learningRate, momentum),
+                    loss: tf.losses.meanSquaredError
+                };
+                model.compile(compileParam);
+                tfvis.show.modelSummary({ name: 'Model Summary', tab: 'Model' }, model);
+                
+                // Train the model with the normalized data
+                var _history = [];
+                var epochs = parseInt(document.getElementById('epochsInput').value);
+                var fitParam = {
+                    epochs: epochs,
+                    callbacks: {
+                        onEpochEnd: function (epoch, logs) {
+                            console.log('epoch', epoch, logs, 'RMSE=>', Math.sqrt(logs.loss));
+                            _history.push(logs);
+                            tfvis.show.history({ name: 'loss', tab: '역사' }, _history, ['loss']);
+                        }
+                    }
+                }
+                model.fit(normalizedInputData, normalizedOutputData, fitParam).then(function (result) {
+                    isTraining = false;
+                    
+                    // Use the model
+                    var predictedOutput = model.predict(normalizedInputData);
+                    // Denormalize the predicted output
+                    var denormalizedPredictedOutput = predictedOutput.mul(outputMax.sub(outputMin)).add(outputMin);
+                    denormalizedPredictedOutput.print();
+                    predictionData = denormalizedPredictedOutput.arraySync();
+                    
+                    const weights = model.getWeights()[0].dataSync();
+                    const bias = model.getWeights()[1].dataSync();
+                    console.log('Weights:', weights);
+                    console.log('Bias:', bias);
+                    
+                    // Show the download button
+                    document.getElementById('downloadButton').style.display = 'block';
+                });
+            };
+            reader.readAsText(file);
+        }
+        
+        // Function to stop machine learning
+        function stopMachineLearning() {
+            if (isTraining) {
+                model.stopTraining = true;
+                isTraining = false;
+            }
+        }
+        
+        // Function to handle result file download
+        function downloadResults() {
+            if (predictionData) {
+                var predictionText = '';
+                for (var i = 0; i < predictionData.length; i++) {
+                    predictionText += predictionData[i].join('\t') + '\n';
+                }
+                saveDataToFile(predictionText, 'predictions_output.txt');
+                
+                const weights = model.getWeights()[0].dataSync();
+                const bias = model.getWeights()[1].dataSync();
+                var weightsText = 'Weights:\n' + weights.join('\n');
+                var biasText = 'Bias:\n' + bias.join('\n');
+                saveDataToFile(weightsText + '\n' + biasText, 'weights_bias_output.txt');
+            }
+        }
+        
+        document.getElementById('startButton').addEventListener('click', startMachineLearning);
+        document.getElementById('stopButton').addEventListener('click', stopMachineLearning);
+        document.getElementById('downloadButton').addEventListener('click', downloadResults);
+        </script>
+        </div>
+        </body>
+        </html>
+        
